@@ -632,67 +632,27 @@ def generate_html(positions, account, signals, run_date):
 
 
 # ── MAIN EXECUTION PIPELINE ─────────────────────────────────────────
+# ── MAIN EXECUTION PIPELINE ─────────────────────────────────────────
 def main():
     csv_path = sys.argv[1] if len(sys.argv) > 1 else None
     positions = {}
 
+    # 1. If explicit argument given and exists, use it
     if csv_path and Path(csv_path).exists():
-        with open(csv_path, 'r', encoding='utf-8-sig') as f:
+        target_csv = Path(csv_path)
+    else:
+        # 2. Automatically find the MOST RECENT .csv file in the repo
+        csv_files = sorted(Path('.').glob('*.csv'), key=lambda p: p.stat().st_mtime, reverse=True)
+        target_csv = csv_files[0] if csv_files else None
+
+    if target_csv and target_csv.exists():
+        with open(target_csv, 'r', encoding='utf-8-sig') as f:
             csv_text = f.read()
         positions = parse_fidelity_csv_text(csv_text)
-        print(f"Loaded {len(positions)} positions from {csv_path}")
+        print(f"Successfully loaded {len(positions)} positions from: {target_csv.name}")
     else:
-        # Fallback search for any .csv file in current workspace
-        csv_files = list(Path('.').glob('*.csv'))
-        if csv_files:
-            target_csv = csv_files[0]
-            with open(target_csv, 'r', encoding='utf-8-sig') as f:
-                csv_text = f.read()
-            positions = parse_fidelity_csv_text(csv_text)
-            print(f"Loaded {len(positions)} positions from {target_csv.name}")
-        else:
-            print("No CSV provided or found — using baseline demo data")
-            positions = {
-                'SPAXX': {'val':8812,'cost':8812,'qty':8812},
-                'NVDA':  {'val':85840,'cost':67608,'qty':250},
-                'AVGO':  {'val':81059,'cost':68434,'qty':202},
-                'QQQM':  {'val':139188,'cost':116973,'qty':466},
-                'GOOG':  {'val':102826,'cost':80591,'qty':285},
-                'SPY':   {'val':119867,'cost':107225,'qty':305},
-                'CRWD':  {'val':46830,'cost':35472,'qty':250},
-                'AAPL':  {'val':60856,'cost':48981,'qty':193},
-                'MSFT':  {'val':65126,'cost':72014,'qty':167},
-                'AMZN':  {'val':80116,'cost':76632,'qty':325},
-                'META':  {'val':46642,'cost':45235,'qty':67},
-                'AMD':   {'val':20706,'cost':8164,'qty':37},
-                'MU':    {'val':35502,'cost':25630,'qty':36},
-                'LLY':   {'val':37302,'cost':28479,'qty':30},
-                'GEV':   {'val':14638,'cost':7894,'qty':31},
-                'TER':   {'val':40964,'cost':44980,'qty':113},
-                'COHR':  {'val':24695,'cost':20733,'qty':66},
-                'VRT':   {'val':20022,'cost':16797,'qty':66},
-                'NOW':   {'val':20500,'cost':14846,'qty':200},
-                'PLTR':  {'val':17080,'cost':20928,'qty':135},
-                'SOXX':  {'val':58529,'cost':42707,'qty':100},
-                'JPM':   {'val':27108,'cost':25336,'qty':80},
-                'GE':    {'val':29778,'cost':24688,'qty':82},
-                'UNH':   {'val':24924,'cost':22651,'qty':58},
-                'PANW':  {'val':7093,'cost':4235,'qty':18},
-                'JEPQ':  {'val':30775,'cost':27342,'qty':194},
-                'TSM':   {'val':14632,'cost':10220,'qty':67},
-                'QCOM':  {'val':10794,'cost':10160,'qty':57},
-                'ARM':   {'val':5235,'cost':5200,'qty':16},
-                'MP':    {'val':15672,'cost':21611,'qty':286},
-                'GLD':   {'val':18181,'cost':19984,'qty':95},
-                'ENB':   {'val':18383,'cost':17804,'qty':850},
-                'CRM':   {'val':17945,'cost':19915,'qty':98},
-                'RTX':   {'val':15500,'cost':14021,'qty':98},
-                'GS':    {'val':10638,'cost':9477,'qty':10},
-                'NEE':   {'val':11185,'cost':10975,'qty':140},
-                'O':     {'val':11633,'cost':11364,'qty':120},
-                'SCHD':  {'val':6368,'cost':6130,'qty':77},
-                'COPX':  {'val':4608,'cost':4999,'qty':120},
-            }
+        print("No CSV file found — using baseline demo data")
+        positions = {}
 
     account = sum(p['val'] for p in positions.values())
     signals = fetch_market_signals()
@@ -702,7 +662,7 @@ def main():
     out = Path('index.html')
     out.write_text(html, encoding='utf-8')
     print(f"Dashboard generated → {out.absolute()}")
-    print(f"Account: ${account:,.2f}")
+    print(f"Account Total: ${account:,.2f}")
 
 if __name__ == '__main__':
     main()
