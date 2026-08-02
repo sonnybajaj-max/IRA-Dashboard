@@ -338,45 +338,57 @@ def generate_html(positions, account, signals, run_date):
     vix_gauge_color = '#22c55e' if vix_v < 20 else ('#f59e0b' if vix_v < 25 else '#ef4444')
     skew_gauge_color = '#ef4444' if skew_v < 115 else ('#f59e0b' if skew_v < 130 else '#22c55e')
 
-    sec19_cards_html = ''.join(f"""
-    <div class="clock-card">
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <span class="sym">{s['sym']}</span>
-        <span style="color:{s['color']};font-weight:700">
-          {f"⚠️ EXPIRED — ACTION NOW" if s['remaining']==0 else f"{s['remaining']} days remaining"}
-        </span>
-      </div>
-      <div class="progress" style="margin:10px 0">
-        <div class="progress-fill" style="width:{min(100,(s['elapsed']/30)*100):.0f}%;background:{s['color']}"></div>
-      </div>
-      <div style="color:#94a3b8;font-size:11px">Catalyst: {s['catalyst']}</div>
-      <div style="color:#64748b;font-size:11px;margin-top:4px">Status: {s['status']}</div>
-    </div>""" for s in sec19_rows) or '<div style="color:#64748b;padding:12px">No open Section 19 investigations</div>'
+    sec19_list = []
+    for s in sec19_rows:
+        clk_lbl = "⚠️ EXPIRED — ACTION NOW" if s['remaining']==0 else f"{s['remaining']} days remaining"
+        pct_fill = min(100, (s['elapsed']/30)*100)
+        sec19_list.append(f"""
+        <div class="clock-card">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span class="sym">{s['sym']}</span>
+            <span style="color:{s['color']};font-weight:700">{clk_lbl}</span>
+          </div>
+          <div class="progress" style="margin:10px 0">
+            <div class="progress-fill" style="width:{pct_fill:.0f}%;background:{s['color']}"></div>
+          </div>
+          <div style="color:#94a3b8;font-size:11px">Catalyst: {s['catalyst']}</div>
+          <div style="color:#64748b;font-size:11px;margin-top:4px">Status: {s['status']}</div>
+        </div>""")
 
-    sndk_items_html = ''.join(f"""
-    <div class="sndk-item">
-      <span class="sym">{g['sym']}</span>
-      <div style="flex:1;margin:0 12px">
-        <div class="gauge-bar"><div class="gauge-fill" 
-          style="width:{min(100,g['pct']/1.5*100):.0f}%;background:{'#22c55e' if g['pct']>=1.5 else '#f59e0b'}"></div>
-        </div>
-      </div>
-      <span style="color:#94a3b8;font-size:11px;min-width:80px;text-align:right">{g['pct']:.2f}% / 1.50%</span>
-      <span style="color:#f59e0b;margin-left:12px;min-width:80px;text-align:right">${g['gap']:,.0f} gap</span>
-    </div>""" for g in sorted(sndk_gaps, key=lambda x:-x['gap'])) or '<div class="sndk-item" style="color:#22c55e">✅ All conviction positions at or above SNDK minimum</div>'
+    sec19_cards_html = "".join(sec19_list) if sec19_list else '<div style="color:#64748b;padding:12px">No open Section 19 investigations</div>'
 
-    rsi_cards_html = ''.join(f"""
-    <div class="rsi-card">
-      <div style="display:flex;justify-content:space-between">
-        <span class="sym">{sym}</span>
-        <span style="color:#94a3b8;font-size:11px">{p['strategy']}</span>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px;font-size:11px">
-        <div><span style="color:#64748b">Entry</span><br><span>${p['entry']}</span></div>
-        <div><span style="color:#ef4444">Stop</span><br><span>${p['stop']}</span></div>
-        <div><span style="color:#22c55e">Target</span><br><span>${p['target']}</span></div>
-      </div>
-    </div>""" for sym, p in RSI_BOT_POSITIONS.items())
+    sndk_list = []
+    for g in sorted(sndk_gaps, key=lambda x:-x['gap']):
+        w_fill = min(100, g['pct']/1.5*100)
+        c_fill = '#22c55e' if g['pct']>=1.5 else '#f59e0b'
+        sndk_list.append(f"""
+        <div class="sndk-item">
+          <span class="sym">{g['sym']}</span>
+          <div style="flex:1;margin:0 12px">
+            <div class="gauge-bar"><div class="gauge-fill" style="width:{w_fill:.0f}%;background:{c_fill}"></div></div>
+          </div>
+          <span style="color:#94a3b8;font-size:11px;min-width:80px;text-align:right">{g['pct']:.2f}% / 1.50%</span>
+          <span style="color:#f59e0b;margin-left:12px;min-width:80px;text-align:right">${g['gap']:,.0f} gap</span>
+        </div>""")
+
+    sndk_items_html = "".join(sndk_list) if sndk_list else '<div class="sndk-item" style="color:#22c55e">✅ All conviction positions at or above SNDK minimum</div>'
+
+    rsi_list = []
+    for sym_bot, p_bot in RSI_BOT_POSITIONS.items():
+        rsi_list.append(f"""
+        <div class="rsi-card">
+          <div style="display:flex;justify-content:space-between">
+            <span class="sym">{sym_bot}</span>
+            <span style="color:#94a3b8;font-size:11px">{p_bot['strategy']}</span>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px;font-size:11px">
+            <div><span style="color:#64748b">Entry</span><br><span>${p_bot['entry']}</span></div>
+            <div><span style="color:#ef4444">Stop</span><br><span>${p_bot['stop']}</span></div>
+            <div><span style="color:#22c55e">Target</span><br><span>${p_bot['target']}</span></div>
+          </div>
+        </div>""")
+
+    rsi_cards_html = "".join(rsi_list)
 
     return f"""<!DOCTYPE html>
 <html lang="en">
