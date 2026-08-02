@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UKB IRA — Playbook v2.18 Dashboard</title>
+<style>
+  :root {
+    --navy: #0D1B2A; --slate: #1B3A5C; --teal: #1A9B8F;
+    --gold: #C9922A; --red: #ef4444; --amber: #f59e0b;
+    --green: #22c55e; --blue: #3b82f6; --bg: #0f172a; --card: #1e293b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'SF Mono', 'Consolas', monospace; background: var(--bg);
+    color: #e2e8f0; font-size: 13px; line-height: 1.5; padding: 20px; }
+  .header { background: var(--navy); border-bottom: 2px solid var(--gold);
+    padding: 20px 24px; display: flex; justify-content: space-between; align-items: center; border-radius: 8px; }
+  .header h1 { font-size: 20px; color: var(--gold); letter-spacing: 0.05em; }
+  .header .meta { color: #94a3b8; font-size: 11px; text-align: right; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px; padding: 16px 0; }
+  .kpi { background: var(--card); border: 1px solid #334155; border-radius: 8px;
+    padding: 16px; }
+  .kpi .label { color: #94a3b8; font-size: 10px; text-transform: uppercase;
+    letter-spacing: 0.1em; margin-bottom: 4px; }
+  .kpi .value { font-size: 22px; font-weight: 700; }
+  .kpi .sub { color: #64748b; font-size: 11px; margin-top: 4px; }
+  .section { padding: 12px 0; }
+  .section h2 { color: var(--teal); font-size: 13px; text-transform: uppercase;
+    letter-spacing: 0.1em; margin-bottom: 10px; padding-bottom: 6px;
+    border-bottom: 1px solid #334155; }
+  .alert { padding: 10px 14px; border-radius: 6px; margin-bottom: 8px; font-size: 12px; }
+  .alert.red { background: rgba(239,68,68,0.15); border-left: 3px solid var(--red); }
+  .alert.amber { background: rgba(245,158,11,0.15); border-left: 3px solid var(--amber); }
+  .alert.green { background: rgba(34,197,94,0.15); border-left: 3px solid var(--green); }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { background: var(--slate); color: #94a3b8; font-size: 10px; text-transform: uppercase;
+    letter-spacing: 0.05em; padding: 8px 10px; text-align: left; position: sticky; top: 0; }
+  td { padding: 7px 10px; border-bottom: 1px solid #1e293b; }
+  tr:hover { background: rgba(255,255,255,0.03); }
+  .sym { font-weight: 700; color: var(--gold); font-size: 13px; }
+  .num { text-align: right; font-feature-settings: 'tnum'; }
+  .badge { font-size: 10px; padding: 2px 8px; border-radius: 4px; font-weight: 600; display: inline-block; }
+  .t1 { background: rgba(34,197,94,0.2); color: var(--green); border: 1px solid rgba(34,197,94,0.3); }
+  .t2 { background: rgba(245,158,11,0.2); color: var(--amber); border: 1px solid rgba(245,158,11,0.3); }
+  .score-badge { font-size: 10px; padding: 2px 6px; border-radius: 3px; color: white; font-weight: 700; display: inline-block; }
+  .table-wrap { background: var(--card); border: 1px solid #334155; border-radius: 8px;
+    overflow: auto; max-height: 600px; }
+  .routing-banner { background: rgba(26,155,143,0.15); border: 1px solid var(--teal); border-radius: 8px; padding: 14px; margin-bottom: 12px; }
+  .routing-banner h3 { font-size: 11px; color: var(--teal); text-transform: uppercase; margin-bottom: 4px; }
+  .routing-banner p { font-size: 13px; font-weight: bold; color: #e2e8f0; }
+  .heat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .heat-card { background: var(--card); border: 1px solid #334155; border-radius: 8px; padding: 16px; }
+  .heat-card h3 { font-size: 11px; color: #94a3b8; text-transform: uppercase; margin-bottom: 12px; }
+  .gauge-bar { background: #1e293b; border-radius: 4px; height: 8px; margin: 8px 0; }
+  .gauge-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
+  .signal-row { display: flex; justify-content: space-between; align-items: center;
+    padding: 6px 0; border-bottom: 1px solid #334155; }
+  .signal-row:last-child { border-bottom: none; }
+  .clock-card { background: var(--card); border: 1px solid #334155; border-radius: 8px;
+    padding: 14px; margin-bottom: 8px; }
+  .clock-card .sym { font-size: 16px; }
+  .progress { background: #1e293b; border-radius: 4px; height: 6px; margin: 8px 0; }
+  .progress-fill { height: 100%; border-radius: 4px; }
+  .sndk-item { display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 12px; border-bottom: 1px solid #1e293b; }
+  .rsi-card { background: var(--card); border: 1px solid #334155; border-radius: 8px;
+    padding: 12px; margin-bottom: 8px; }
+  footer { text-align: center; color: #475569; font-size: 10px; padding: 20px 0;
+    border-top: 1px solid #1e293b; margin-top: 20px; }
+  @media (max-width: 768px) {
+    .grid { grid-template-columns: repeat(2, 1fr); }
+    .heat-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>UKB IRA — Playbook Dashboard v2.18</h1>
+    <div style="color:#94a3b8;font-size:11px;margin-top:4px">
+      Account 250718173 · Fidelity
+    </div>
+  </div>
+  <div class="meta">
+    <div style="color:var(--gold);font-size:16px;font-weight:700">$1,392,951</div>
+    <div>Generated August 02, 2026 at 17:26</div>
+    <div>Peak: $1,433,927</div>
+  </div>
+</div>
+
+<div class="grid">
+  <div class="kpi">
+    <div class="label">Account Value</div>
+    <div class="value" style="color:var(--gold)">$1,392,951</div>
+    <div class="sub">Peak: $1,433,927</div>
+  </div>
+  <div class="kpi">
+    <div class="label">Drawdown from Peak</div>
+    <div class="value" style="color:#22c55e">-2.86%</div>
+    <div class="sub">Rule 20 buffer: $73,738</div>
+  </div>
+  <div class="kpi">
+    <div class="label">SPAXX / Cash</div>
+    <div class="value" style="color:var(--teal)">$21,934</div>
+    <div class="sub">1.57% of account</div>
+  </div>
+  <div class="kpi">
+    <div class="label">VIX</div>
+    <div class="value" style="color:#22c55e">19.5</div>
+    <div class="sub">last known</div>
+  </div>
+  <div class="kpi">
+    <div class="label">SKEW</div>
+    <div class="value" style="color:#22c55e">143.1</div>
+    <div class="sub">🟢 WELL-HEDGED</div>
+  </div>
+  <div class="kpi">
+    <div class="label">Positions Tracked</div>
+    <div class="value" style="color:#e2e8f0">36</div>
+    <div class="sub">Excl. SPAXX</div>
+  </div>
+</div>
+
+<div class="section">
+  <h2>⚡ Action Required This Week</h2>
+  <div class="alert red">🔴 +100% — Rule 14 TRIGGERED on <b>AMD</b> (+113.0%)</div><div class="alert red">⏰ Section 19 EXPIRED: <b>MSFT</b> — TRIM REQUIRED</div><div class="alert red">⏰ Section 19 EXPIRED: <b>MP</b> — LONG-CYCLE HOLD</div><div class="alert amber">💰 Cash Warning: SPAXX $21,934 may be below combined reserves</div>
+</div>
+
+<div class="section">
+  <h2>📐 §17 Rule 32 — Institutional Tier Drift Protocol</h2>
+  <div class="routing-banner">
+    <h3>Active Review Exit Capital Routing Directive (Step 1: T4 Active Review > 10%)</h3>
+    <p>➡ 100% SPAXX (Hold proceeds until T4 < 8%)</p>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Tier Name</th><th>Current Value</th><th>Current %</th>
+          <th>Target %</th><th>Band Range</th><th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+            <td><strong>T1 — Compound Engines</strong></td>
+            <td class="num">$456,268</td>
+            <td class="num"><strong>32.76%</strong></td>
+            <td class="num">40.0%</td>
+            <td class="num">35.0% – 45.0%</td>
+            <td style="color:#ef4444;font-weight:bold;">BELOW BAND</td>
+        </tr>
+        
+        <tr>
+            <td><strong>T2 — ETF Sleeve</strong></td>
+            <td class="num">$361,592</td>
+            <td class="num"><strong>25.96%</strong></td>
+            <td class="num">28.0%</td>
+            <td class="num">25.0% – 35.0%</td>
+            <td style="color:#22c55e;font-weight:bold;">IN BAND</td>
+        </tr>
+        
+        <tr>
+            <td><strong>T3 — Semi Thesis</strong></td>
+            <td class="num">$102,258</td>
+            <td class="num"><strong>7.34%</strong></td>
+            <td class="num">8.0%</td>
+            <td class="num">6.0% – 10.0%</td>
+            <td style="color:#22c55e;font-weight:bold;">IN BAND</td>
+        </tr>
+        
+        <tr>
+            <td><strong>T4 — Active Review</strong></td>
+            <td class="num">$160,405</td>
+            <td class="num"><strong>11.52%</strong></td>
+            <td class="num">2.0%</td>
+            <td class="num">0.0% – 8.0%</td>
+            <td style="color:#ef4444;font-weight:bold;">ABOVE BAND</td>
+        </tr>
+        
+        <tr>
+            <td><strong>T5 — Diversifiers</strong></td>
+            <td class="num">$290,495</td>
+            <td class="num"><strong>20.85%</strong></td>
+            <td class="num">12.0%</td>
+            <td class="num">8.0% – 15.0%</td>
+            <td style="color:#ef4444;font-weight:bold;">ABOVE BAND</td>
+        </tr>
+        
+        <tr>
+            <td><strong>T6 — Cash Reserve</strong></td>
+            <td class="num">$21,934</td>
+            <td class="num"><strong>1.57%</strong></td>
+            <td class="num">2.0%</td>
+            <td class="num">1.0% – 3.0%</td>
+            <td style="color:#22c55e;font-weight:bold;">IN BAND</td>
+        </tr>
+        </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="section">
+  <h2>📡 Section 24 — Predictive Heat Monitor</h2>
+  <div class="heat-grid">
+    <div class="heat-card">
+      <h3>VIX — Fear Gauge</h3>
+      <div class="signal-row">
+        <span>Spot VIX</span>
+        <span style="color:#22c55e;font-weight:700">19.5</span>
+      </div>
+      <div class="gauge-bar"><div class="gauge-fill" style="width:49%;background:#22c55e"></div></div>
+      <div class="signal-row"><span>R-IRA 2 Trigger</span><span style="color:#64748b">VIX &gt;25 + backwardation</span></div>
+      <div class="signal-row"><span>Status</span><span style="color:#22c55e">🟢 OK</span></div>
+    </div>
+    <div class="heat-card">
+      <h3>SKEW — Hedging Gauge</h3>
+      <div class="signal-row">
+        <span>SKEW Index</span>
+        <span style="color:#22c55e;font-weight:700">143.1</span>
+      </div>
+      <div class="gauge-bar"><div class="gauge-fill" style="width:80%;background:#22c55e"></div></div>
+      <div class="signal-row"><span>&lt;115</span><span style="color:#ef4444">Unhedged — Block deploy</span></div>
+      <div class="signal-row"><span>115-130</span><span style="color:#f59e0b">Partial — R-IRA Tier 1 only</span></div>
+      <div class="signal-row"><span>&gt;130</span><span style="color:#22c55e">Well-hedged — Full deploy OK</span></div>
+    </div>
+    <div class="heat-card">
+      <h3>HY Credit Spreads (BAMLH0A0HYM2)</h3>
+      <div class="signal-row"><span>OAS</span>
+        <span style="color:#22c55e;font-weight:700">310 bps</span>
+      </div>
+      <div class="signal-row"><span>Trigger</span><span style="color:#64748b">&gt;500bps + widening &gt;50bps/5d</span></div>
+      <div class="signal-row"><span>Status</span>
+        <span style="color:#22c55e">🟢 OK</span>
+      </div>
+      <div class="signal-row"><span>Data source</span><span style="color:#64748b">FRED: BAMLH0A0HYM2</span></div>
+    </div>
+    <div class="heat-card">
+      <h3>Rule 20 — Drawdown Control</h3>
+      <div class="signal-row"><span>Current</span>
+        <span style="color:#22c55e;font-weight:700">-2.86%</span>
+      </div>
+      <div class="signal-row"><span>-8% trigger</span><span style="color:#64748b">$1,319,213</span></div>
+      <div class="signal-row"><span>-12% alert</span><span style="color:#64748b">$1,261,856</span></div>
+      <div class="signal-row"><span>Buffer to -8%</span>
+        <span style="color:#22c55e">$73,738</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h2>⏱ Section 19 — Decision Clocks</h2>
+  
+    <div class="clock-card">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span class="sym">MSFT</span>
+        <span style="color:#ef4444;font-weight:700">
+          ⚠️ EXPIRED — ACTION NOW
+        </span>
+      </div>
+      <div class="progress" style="margin:10px 0">
+        <div class="progress-fill" style="width:100%;background:#ef4444"></div>
+      </div>
+      <div style="color:#94a3b8;font-size:11px">Catalyst: None — clock expired</div>
+      <div style="color:#64748b;font-size:11px;margin-top:4px">Status: TRIM REQUIRED</div>
+    </div>
+    <div class="clock-card">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span class="sym">CRM</span>
+        <span style="color:#3b82f6;font-weight:700">
+          7 days remaining
+        </span>
+      </div>
+      <div class="progress" style="margin:10px 0">
+        <div class="progress-fill" style="width:77%;background:#3b82f6"></div>
+      </div>
+      <div style="color:#94a3b8;font-size:11px">Catalyst: None identified</div>
+      <div style="color:#64748b;font-size:11px;margin-top:4px">Status: INVESTIGATING</div>
+    </div>
+    <div class="clock-card">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span class="sym">MP</span>
+        <span style="color:#ef4444;font-weight:700">
+          ⚠️ EXPIRED — ACTION NOW
+        </span>
+      </div>
+      <div class="progress" style="margin:10px 0">
+        <div class="progress-fill" style="width:100%;background:#ef4444"></div>
+      </div>
+      <div style="color:#94a3b8;font-size:11px">Catalyst: Independence TX Q4 2026 (Long-Cycle)</div>
+      <div style="color:#64748b;font-size:11px;margin-top:4px">Status: LONG-CYCLE HOLD</div>
+    </div>
+</div>
+
+<div class="section">
+  <h2>📏 SNDK Minimum Status (1.5% = $20,894)</h2>
+  <div style="background:var(--card);border:1px solid #334155;border-radius:8px;overflow:hidden">
+    
+    <div class="sndk-item">
+      <span class="sym">TSM</span>
+      <div style="flex:1;margin:0 12px">
+        <div class="gauge-bar"><div class="gauge-fill" 
+          style="width:65%;background:#f59e0b"></div>
+        </div>
+      </div>
+      <span style="color:#94a3b8;font-size:11px;min-width:80px;text-align:right">0.97% / 1.50%</span>
+      <span style="color:#f59e0b;margin-left:12px;min-width:80px;text-align:right">$7,364 gap</span>
+    </div>
+    <div class="sndk-item">
+      <span class="sym">PLTR</span>
+      <div style="flex:1;margin:0 12px">
+        <div class="gauge-bar"><div class="gauge-fill" 
+          style="width:80%;background:#f59e0b"></div>
+        </div>
+      </div>
+      <span style="color:#94a3b8;font-size:11px;min-width:80px;text-align:right">1.19% / 1.50%</span>
+      <span style="color:#f59e0b;margin-left:12px;min-width:80px;text-align:right">$4,268 gap</span>
+    </div>
+    <div class="sndk-item">
+      <span class="sym">COHR</span>
+      <div style="flex:1;margin:0 12px">
+        <div class="gauge-bar"><div class="gauge-fill" 
+          style="width:84%;background:#f59e0b"></div>
+        </div>
+      </div>
+      <span style="color:#94a3b8;font-size:11px;min-width:80px;text-align:right">1.26% / 1.50%</span>
+      <span style="color:#f59e0b;margin-left:12px;min-width:80px;text-align:right">$3,411 gap</span>
+    </div>
+    <div class="sndk-item">
+      <span class="sym">CRM</span>
+      <div style="flex:1;margin:0 12px">
+        <div class="gauge-bar"><div class="gauge-fill" 
+          style="width:97%;background:#f59e0b"></div>
+        </div>
+      </div>
+      <span style="color:#94a3b8;font-size:11px;min-width:80px;text-align:right">1.46% / 1.50%</span>
+      <span style="color:#f59e0b;margin-left:12px;min-width:80px;text-align:right">$607 gap</span>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h2>🤖 RSI Bot Positions (Outside Rule 4)</h2>
+  <div style="background:var(--card);border:1px solid #334155;border-radius:8px;overflow:hidden">
+    
+    <div class="rsi-card">
+      <div style="display:flex;justify-content:space-between">
+        <span class="sym">GOOG</span>
+        <span style="color:#94a3b8;font-size:11px">RSI Divergence</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px;font-size:11px">
+        <div><span style="color:#64748b">Entry</span><br><span>$371.1</span></div>
+        <div><span style="color:#ef4444">Stop</span><br><span>$348.02</span></div>
+        <div><span style="color:#22c55e">Target</span><br><span>$417.26</span></div>
+      </div>
+    </div>
+    <div class="rsi-card">
+      <div style="display:flex;justify-content:space-between">
+        <span class="sym">AMZN</span>
+        <span style="color:#94a3b8;font-size:11px">RSI Divergence</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px;font-size:11px">
+        <div><span style="color:#64748b">Entry</span><br><span>$244.39</span></div>
+        <div><span style="color:#ef4444">Stop</span><br><span>$233.94</span></div>
+        <div><span style="color:#22c55e">Target</span><br><span>$265.29</span></div>
+      </div>
+    </div>
+    <div class="rsi-card">
+      <div style="display:flex;justify-content:space-between">
+        <span class="sym">AAPL</span>
+        <span style="color:#94a3b8;font-size:11px">Triple RSI MR</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px;font-size:11px">
+        <div><span style="color:#64748b">Entry</span><br><span>$278.55</span></div>
+        <div><span style="color:#ef4444">Stop</span><br><span>$270.69</span></div>
+        <div><span style="color:#22c55e">Target</span><br><span>$283.05</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h2>📊 Full Portfolio — All Positions</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Symbol</th><th>Tier</th><th>Peer Group</th><th>Value</th>
+          <th>Gain/Loss</th><th>Weight</th><th>Rule 3</th>
+          <th>Rule 29 Tier</th><th>Rule 4</th><th>SNDK</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="sym">QQQM</td>
+          <td><span class="badge" style="background:#334155;color:#e2e8f0">T2</span></td>
+          <td>Broad Index</td>
+          <td class="num">$131,959</td>
+          <td class="num" style="color:#86efac">+12.8%</td>
+          <td class="num">9.47%</td>
+          <td><span class="score-badge" style="background:#3b82f6">4/5</span></td>
+          <td><span class="badge t2">🔄 Active Review</span></td>
+          <td style="color:#22c55e">—</td>
+          <td class="num" style="color:#22c55e">
+            ✅
+          </td>
+        </tr>
+        <tr>
+          <td class="sym">SPY</td>
+          <td><span class="badge" style="background:#334155;color:#e2e8f0">T2</span></td>
+          <td>Broad Index</td>
+          <td class="num">$119,053</td>
+          <td class="num" style="color:#86efac">+11.0%</td>
+          <td class="num">8.55%</td>
+          <td><span class="score-badge" style="background:#3b82f6">4/5</span></td>
+          <td><span class="badge t2">🔄 Active Review</span></td>
+          <td style="color:#22c55e">—</td>
+          <td class="num" style="color:#22c55e">
+            ✅
+          </td>
+        </tr>
+        <tr>
+          <td class="sym">GOOG</td>
+          <td><span class="badge" style="background:#334155;color:#e2e8f0">T1</span></td>
+          <td>Mag7</td>
+          <td class="num">$104,007</td>
+          <td class="num" style="color:#86efac">+29.1%</td>
+          <td class="num">7.47%</td>
+          <td><span class="score-badge" style="background:#3b82f6">4/5</span></td>
+          <td><span class="badge t2">🔄 Active Review</span></td>
+          <td style="color:#22c55e">✅ Active</td>
+          <td class="num" style="color:#22c55e">
+            ✅
+          </td>
+        </tr>
+        <tr>
+          <td class="sym">AMZN</td>
+          <td><span class="badge" style="background:#334155;color:#e2e8f0">T1</span></td>
+          <td>Mag7</td>
+          <td class="num">$88,810</td>
+          <td class="num" style="color:#86efac">+15.9%</td>
+          <td class="num">6.38%</td>
+          <td><span class="score-badge" style="background:#3b82f6">4/5</span></td>
+          <td><span class="badge t2">🔄 Active Review</span></td>
+          <td style="color:#22c55e">✅ Active</td>
+          <td class="num" style="color:#22c55e">
+            ✅
+          </td>
+        </tr>
+        <tr>
+          <td class="sym">NVDA</td>
+          <td><span class="badge" style="background:#334155;color:#e2e8f0">T1</span></td>
+          <td>Mag7+Semi</td>
+          <td class="num">$81,767</td>
+          <td class="num" style="color:#86efac">+20.9%</td>
+          <td class="num">5.87%</td>
+          <td><span class="score-badge" style="background:#22c55e">5/5</span></td>
+          <td><span class="badge t1">⚡ Compound Engine</span></td>
+          <td style="color:#22c55e">✅ Active</td>
+          <td class="num" style="color:#22c55e">
+            ✅
+          </td>
+        </tr>
+        <tr>
+          <td class="sym">AVGO</td>
+          <td><span class="badge" style="background:#334155;color:#e2e8f0">T1</span></td>
+          <td>Mag7+Semi</td>
+          <td class="num">$78,865</td>
+          <td class="num" style="color:#86efac">+15.2%</td>
+          <td class="num">5.66%</td>
+          <td><span class="score-badge" style="background:#22c55e">5/5</span></td>
+          <td><span class="badge t1">⚡ Compound Engine</span></td>
+          <td style="color:#22c55e">✅ Active</td>
+          <td class="num" style="color:#22c55e">
+            ✅
+          </td>
+        </tr>
+        <tr>
+          <td class="sym">VGT</td>
+          <td><span class="badge" style="background:#334155;color:#e2e8f0">T2</span></td>
+          <td>—</td>
+          <td class="num">$59,935</td>
+          <td class="num" style="color:#86efac">+0.5%</td>
+          <td class="num">4.30%</td>
+          <td><span class="score-badge" style="background:#6b7280">0/5</span></td>
+          <td><span class="badge t2">🔄 Active Review</span></td>
+          <td style="color:#22c55e">—</td>
+          <td class="num" style="color:#22c55e">
+            ✅
+          </td>
+        </tr>
+        <tr>
+          <td class="sym">AAPL</td>
+          <td><span class="badge" style="background:#334155;color:#e2e8f0">T4</span></td>
+          <td>Mag7</td>
+          <td class="num">$59,847</td>
+          <td class="num" style="color:#86efac">+22.2%</td>
+          <td class="num">4.30%</td>
+          <td><span class="score-badge" style="background:#3b82f6">4/5</span></td>
+          <td><span class="badge t2">🔄 Active Review</span></td>
+          <td style="color:#22c55e">—</td>
+          <td class="num" style="color:#22c55e">
+            ✅
+          </td>
+        </tr>
+        <tr>
+          <td class="sym">MSFT</td>
+          <td><span class="badge" style="background:#334155;color:#e2e8f0">T1</span></td>
+          <td>Mag7</td>
+          <td class="num">$55,193</td>
+          <td class="num" style="color:#86efac">+14.1%</td>
+          <td class="num">3.96%</td>
+          <td><span class="score-badge" style="background:#3b82f6">4/5</span></td>
+          <td><span class="badge t2">🔄 Active Review</span></td>
+          <td style="color:#ef4444">🔴 SUSPENDED</td>
+          <td class="num" style="color:#22c55e">
+            ✅
+          </td>
+        </tr>
+        <tr>
+          <td class="sym">SOXX</td>
+          <td><span class="badge" style="background:#334155;color:#e2e8f0">T2</span></td>
+          <td>Semi ETF</td>
+          <td class="num">$50,646</td>
+          <td class="num" style="color:#86efac">+18.6%</td>
+          <td class="num">3.64%</td>
+          <td><span class="score-badge" style="background:#3b82f6">4/5</span></td>
+          <td><span class="badge t2">🔄 Active Review</span></td>
+          <td style="color:#22c55e">—</td>
+          <td class="num" style="color:#22c55e">
+            ✅
+          </td>
+        </tr>
+        <tr>
+          <td class="sym">CRWD</td>
+          <td><span class="badge" style="background:#334155;color:#e2e8f0">T1</span></td>
+          <td>Cybersecurity</td>
+          <td class="num">$47,625</td>
+          <td class="num" style="color:#86efac">+34.3%</td>
+          <td class="num">3.42%</td>
+          <td><span class="score-badge" style="background:#22c55e">5/5</span></td>
+          <td><span class="badge t1">⚡ Compound Engine</span></td>
+          <td style="color:#22c55e">✅ Active</td>
+          <td class="num" style="color:#22c55e">
+            ✅
+          </td>
+        </tr>
+        <tr>
+          <td class="sym">TER</td>
+          <td><span class="badge" style="background:#334155;color:#e2e8f0">T3</span></td>
+          <td>Semi Equip</td>
+          <td class="num">$41,799</td>
+          <td class="num" style="color:#fbbf24">-7.1%</td>
+          <td class="num">3.00%</td>
+          <td><span class="score-badge" style="background:#3b82f6">4/5</span></td>
+          <td><span class="badge t2">🔄 Active Review</span></td>
+          <td style="color:#22c55e">—</td>
+          <td class="num" style="color:#22c55e">
+            ✅
+          </td>
+        </tr>
+        <tr>
+          <td class="sym">META</td>
+          <td><span class="badge" style="background:#334155;color:#e2e8f0">T4</span></td>
+          <td>Mag7</td>
+          <td class="num">$38,984</td>
+          <td class="num" style="color:#ef4444">-13.8%</td>
+          <td class="num">2.80%</td>
+          <td><span class="score-badge" style="background:#3b82f6">4/5</span></td>
+          <td><span class="badge t2">🔄 Active Review</span></td>
+          <td style="color:#22c55e">—</td>
+          <td class="num" style="color:#22c55e">
+            ✅
+          </td>
+        </tr>
+        <tr>
+          <td class="sym">LLY</td>
+          <td><span class="badge" style="background:#334155;color:#e2e8f0">T5</span></td>
+          <td>Healthcare</td>
+          <td class="num">$36,191</td>
+          <td class="num" style="color:#86efac">+27.1%</td>
+          <td class="num">2.60%</td>
+          <td><span class="score-badge" style="background:#3b82f6">4/5</span></td>
+          <td><span class="badge t2">🔄 Active Review</span></td>
+          <td style="color:#22c55e">✅ Active</td>
+          <td class="num" style="color:#22c55e">
+            ✅
+          </td>
+        </tr>
+        <tr>
+          <td class="sym">GE</td>
+          <td><span class="badge" style="background:#334155;color:#e2e8f0">T5</span></td>
+          <td>Industrials</td>
+          <td class="num">$29,845</td>
+          <td class="num" style="color:#86efac">+20.9%</td>
+          <td class="num">2.14%</td>
+          <td><span class="score-badge" style="background:#3b82f6">4/5</span></td>
+          <td><span class="badge t2">🔄 Active Review</span></td>
+          <td style="color:#22c55e">—</td>
+          <td class="num" style="color:#22c55e">
+            ✅
+          </td>
+        </tr>
+        <tr>
+          <td class="sym">MU</td>
+          <td><span class="badge" style="background:#334155;color:#e2e8f0">T3</span></td>
+          <td>Memory Semi</td>
+          <td class="num">$29,446</td>
+          <td class="num" style="color:#86efac">+14.9%</td>
+          <td class="num">2.11%</td>
+          <td><span class="score-badge" style="background:#3b82f6">4/5</span></td>
+          <td><span class="badge t2">🔄 Active Review</span></td>
+          <td style="color:#22c55e">✅ Active</td>
+          <td class="num" style="color:#22c55e">
+            ✅
+          </td>
+        </tr>
+        <tr>
+          <td class="sym">JEPQ</td>
+          <td><span class="badge" style="background:#334155;color:#e2e8f0">T5</span></td>
+          <td>Income</td>
+          <td class="num">$29,275</td>
+          <td class="num" style="color:#86efac">+7.1%</td>
+          <td class="num">2.10%</td>
+          <td><span class="score-badge" style="background:#f59e0b">3/5</span></td>
+          <td><span class="badge t2">🔄 Active Review</span></td>
+          <td style="color:#22c55e">—</td>
+          <td class="num" style="color:#22c55e">
+            ✅
+          </td>
+        </tr>
+        <tr>
+          <td class="sym">JPM</td>
+          <td><span class="badge" style="background:#334155;color:#e2e8f0">T5</span></td>
+          <td>Financials</td>
+          <td class="num">$28,455</td>
+          <td class="num" style="color:#86efac">+12.3%</td>
+          <td class="num">2.04%</td>
+          <td><span class="score-badge" style="background:#3b82f6">4/5</span></td>
+          <td><span class="badge t2">🔄 Active Review</span></td>
+          <td style="color:#22c55e">—</td>
+          <td class="num" style="color:#22c55e">
+            ✅
+          </td>
+        </tr>
+        <tr>
+          <td class="sym">UNH</td>
+          <td><span class="badge" style="background:#334155;color:#e2e8f0">T5</span></td>
+          <td>Healthcare</td>
+          <td class="num">$24,328</td>
+          <td class="num" style="color:#86efac">+7.4%</td>
+          <td class="num">1.75%</td>
+          <td><span class="score-badge" style="background:#3b82f6">4/5</span></td>
+          <td><span class="badge t2">🔄 Active Review</span></td>
+          <td style="color:#22c55e">—</td>
+          <td class="num" style="color:#22c55e">
+            ✅
+          </td>
+        </tr>
+        <tr>
+          <td class="sym">NOW</td>
+          <td><span class="badge" style="background:#334155;color:#e2e8f0">T5</span></td>
+          <td>AI Software</td>
+          <td class="num">$22,246</td>
+          <td class="num" style="color:#86efac">+7.5%</td>
+          <td class="num">1.60%</td>
+          <td><span class="score-badge" style="background:#3b82f6">4/5</span></td>
+          <td><span class="badge t2">🔄 Active Review</span></td>
+          <td style="color:#22c55e">✅ Active</td>
+          <td class="num" style="color:#22c55e">
+            ✅
+          </td>
+        </tr>
+        <tr>
+          <td class="sym">CRM</td>
+          <td><span class="badge" style="background:#334155;color:#e2e8f0">T4</span></td>
+          <td>AI Software</td>
+          <td class="num">$20,287</td>
+          <td class="num" style="color:#86efac">+1.9%</td>
+          <td class="num">1.46%</td>
+          <td><span class="score-badge" style="background:#3b82f6">4/5</span></td>
+          <td><span class="badge t2">🔄 Active Review</span></td>
+          <td style="color:#ef4444">🔴 SUSPENDED</td>
+          <td class="num" style="color:#f59e0b">
+            $607 gap
+          </td>
+        </tr>
+        <tr>
+          <td class="sym">ENB</td>
+          <td><span class="badge" style="background:#334155;color:#e2e8f0">T5</span></td>
+          <td>—</td>
+          <td class="num">$18,431</td>
+          <td class="num" style="color:#86efac">+3.5%</td>
+          <td class="num">1.32%</td>
+          <td><span class="score-badge" style="background:#f59e0b">3/5</span></td>
+          <td><span class="badge t2">🔄 Active Review</span></td>
+          <td style="color:#22c55e">—</td>
+          <td class="num" style="color:#f59e0b">
+            $2,463 gap
+          </td>
+        </tr>
+        <tr>
+          <td class="sym">GLD</td>
+          <td><span class="badge" style="background:#334155;color:#e2e8f0">T5</span></td>
+          <td>Ballast</td>
+          <td class="num">$17,951</td>
+          <td class="num" style="color:#ef4444">-10.2%</td>
+          <td class="num">1.29%</td>
+          <td><span class="score-badge" style="background:#3b82f6">4/5</span></td>
+          <td><span class="badge t2">🔄 Active Review</span></td>
+          <td style="color:#22c55e">—</td>
+          <td class="num" style="color:#f59e0b">
+            $2,943 gap
+          </td>
+        </tr>
+        <tr>
+          <td class="sym">COHR</td>
+          <td><span class="badge" style="background:#334155;color:#e2e8f0">T3</span></td>
+          <td>Semi Optical</td>
+          <td class="num">$17,483</td>
+          <td class="num" style="color:#ef4444">-29.1%</td>
+          <td class="num">1.26%</td>
+          <td><span class="score-badge" style="background:#3b82f6">4/5</span></td>
+          <td><span class="badge t2">🔄 Active Review</span></td>
+          <td style="color:#22c55e">✅ Active</td>
+          <td class="num" style="color:#f59e0b">
+            $3,411 gap
+          </td>
+        </tr>
+        <tr>
+          <td class="sym">PLTR</td>
+          <td><span class="badge" style="background:#334155;color:#e2e8f0">T4</span></td>
+          <td>AI Software</td>
+          <td class="num">$16,627</td>
+          <td class="num" style="color:#ef4444">-20.6%</td>
+          <td class="num">1.19%</td>
+          <td><span class="score-badge" style="background:#3b82f6">4/5</span></td>
+          <td><span class="badge t2">🔄 Active Review</span></td>
+          <td style="color:#22c55e">✅ Active</td>
+          <td class="num" style="color:#f59e0b">
+            $4,268 gap
+          </td>
+        </tr>
+        <tr>
+          <td class="sym">VRT</td>
+          <td><span class="badge" style="background:#334155;color:#e2e8f0">T5</span></td>
+          <td>AI Infra</td>
+          <td class="num">$15,944</td>
+          <td class="num" style="color:#ef4444">-23.1%</td>
+          <td class="num">1.14%</td>
+          <td><span class="score-badge" style="background:#3b82f6">4/5</span></td>
+          <td><span class="badge t2">🔄 Active Review</span></td>
+          <td style="color:#22c55e">✅ Active</td>
+          <td class="num" style="color:#f59e0b">
+            $4,951 gap
+          </td>
+        </tr>
+        <tr>
+          <td class="sym">AMD</td>
+          <td><span class="badge" style="background:#334155;color:#e2e8f0">T5</span></td>
+          <td>Semi</td>
+          <td class="num">$13,876</td>
+          <td class="num" style="color:#22c55e">+113.0%</td>
+          <td class="num">1.00%</td>
+          <td><span class="score-badge" style="background:#f59e0b">3/5</span></td>
+          <td><span class="badge t2">🔄 Active Review</span></td>
+          <td style="color:#22c55e">—</td>
+          <td class="num" style="color:#f59e0b">
+            $7,018 gap
+          </td>
+        </tr>
+        <tr>
+          <td class="sym">TSM</td>
+          <td><span class="badge" style="background:#334155;color:#e2e8f0">T3</span></td>
+          <td>Semi</td>
+          <td class="num">$13,530</td>
+          <td class="num" style="color:#86efac">+32.4%</td>
+          <td class="num">0.97%</td>
+          <td><span class="score-badge" style="background:#3b82f6">4/5</span></td>
+          <td><span class="badge t2">🔄 Active Review</span></td>
+          <td style="color:#22c55e">✅ Active</td>
+          <td class="num" style="color:#f59e0b">
+            $7,364 gap
+          </td>
+        </tr>
+        <tr>
+          <td class="sym">GEV</td>
+          <td><span class="badge" style="background:#334155;color:#e2e8f0">T5</span></td>
+          <td>Industrials</td>
+          <td class="num">$13,183</td>
+          <td class="num" style="color:#22c55e">+67.0%</td>
+          <td class="num">0.95%</td>
+          <td><span class="score-badge" style="background:#3b82f6">4/5</span></td>
+          <td><span class="badge t2">🔄 Active Review</span></td>
+          <td style="color:#22c55e">✅ Active</td>
+          <td class="num" style="color:#f59e0b">
+            $7,712 gap
+          </td>
+        </tr>
+        <tr>
+          <td class="sym">ORCL</td>
+          <td><span class="badge" style="background:#334155;color:#e2e8f0">T5</span></td>
+          <td>—</td>
+          <td class="num">$13,037</td>
+          <td class="num" style="color:#86efac">+2.7%</td>
+          <td class="num">0.94%</td>
+          <td><span class="score-badge" style="background:#f59e0b">3/5</span></td>
+          <td><span class="badge t2">🔄 Active Review</span></td>
+          <td style="color:#22c55e">—</td>
+          <td class="num" style="color:#f59e0b">
+            $7,857 gap
+          </td>
+        </tr>
+        <tr>
+          <td class="sym">MP</td>
+          <td><span class="badge" style="background:#334155;color:#e2e8f0">T4</span></td>
+          <td>—</td>
+          <td class="num">$12,411</td>
+          <td class="num" style="color:#ef4444">-42.6%</td>
+          <td class="num">0.89%</td>
+          <td><span class="score-badge" style="background:#f59e0b">3/5</span></td>
+          <td><span class="badge t2">🔄 Active Review</span></td>
+          <td style="color:#22c55e">—</td>
+          <td class="num" style="color:#f59e0b">
+            $8,483 gap
+          </td>
+        </tr>
+        <tr>
+          <td class="sym">O</td>
+          <td><span class="badge" style="background:#334155;color:#e2e8f0">T5</span></td>
+          <td>—</td>
+          <td class="num">$11,851</td>
+          <td class="num" style="color:#86efac">+4.3%</td>
+          <td class="num">0.85%</td>
+          <td><span class="score-badge" style="background:#f59e0b">3/5</span></td>
+          <td><span class="badge t2">🔄 Active Review</span></td>
+          <td style="color:#22c55e">—</td>
+          <td class="num" style="color:#f59e0b">
+            $9,043 gap
+          </td>
+        </tr>
+        <tr>
+          <td class="sym">RTX</td>
+          <td><span class="badge" style="background:#334155;color:#e2e8f0">T5</span></td>
+          <td>—</td>
+          <td class="num">$8,656</td>
+          <td class="num" style="color:#86efac">+21.7%</td>
+          <td class="num">0.62%</td>
+          <td><span class="score-badge" style="background:#f59e0b">3/5</span></td>
+          <td><span class="badge t2">🔄 Active Review</span></td>
+          <td style="color:#22c55e">—</td>
+          <td class="num" style="color:#f59e0b">
+            $12,238 gap
+          </td>
+        </tr>
+        <tr>
+          <td class="sym">QCOM</td>
+          <td><span class="badge" style="background:#334155;color:#e2e8f0">T4</span></td>
+          <td>Semi</td>
+          <td class="num">$8,414</td>
+          <td class="num" style="color:#ef4444">-17.2%</td>
+          <td class="num">0.60%</td>
+          <td><span class="score-badge" style="background:#f59e0b">3/5</span></td>
+          <td><span class="badge t2">🔄 Active Review</span></td>
+          <td style="color:#22c55e">—</td>
+          <td class="num" style="color:#f59e0b">
+            $12,480 gap
+          </td>
+        </tr>
+        <tr>
+          <td class="sym">PANW</td>
+          <td><span class="badge" style="background:#334155;color:#e2e8f0">T5</span></td>
+          <td>Cybersecurity</td>
+          <td class="num">$7,226</td>
+          <td class="num" style="color:#22c55e">+70.6%</td>
+          <td class="num">0.52%</td>
+          <td><span class="score-badge" style="background:#3b82f6">4/5</span></td>
+          <td><span class="badge t2">🔄 Active Review</span></td>
+          <td style="color:#22c55e">✅ Active</td>
+          <td class="num" style="color:#f59e0b">
+            $13,668 gap
+          </td>
+        </tr>
+        <tr>
+          <td class="sym">ARM</td>
+          <td><span class="badge" style="background:#334155;color:#e2e8f0">T4</span></td>
+          <td>Semi IP</td>
+          <td class="num">$3,835</td>
+          <td class="num" style="color:#ef4444">-26.2%</td>
+          <td class="num">0.28%</td>
+          <td><span class="score-badge" style="background:#3b82f6">4/5</span></td>
+          <td><span class="badge t2">🔄 Active Review</span></td>
+          <td style="color:#22c55e">✅ Active</td>
+          <td class="num" style="color:#f59e0b">
+            $17,059 gap
+          </td>
+        </tr></tbody>
+    </table>
+  </div>
+</div>
+
+<footer>
+  UKB IRA Playbook v2.18 Dashboard · Generated August 02, 2026 at 17:26 ·
+  Peak $1,433,927 · Account 250718173 · Not financial advice
+</footer>
+
+</body></html>
