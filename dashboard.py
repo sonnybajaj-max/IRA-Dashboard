@@ -633,15 +633,16 @@ def generate_html(positions, account, signals, run_date):
 
 # ── MAIN EXECUTION PIPELINE ─────────────────────────────────────────
 # ── MAIN EXECUTION PIPELINE ─────────────────────────────────────────
+# ── MAIN EXECUTION PIPELINE ─────────────────────────────────────────
 def main():
     csv_path = sys.argv[1] if len(sys.argv) > 1 else None
     positions = {}
 
-    # 1. If explicit argument given and exists, use it
+    # 1. If explicit argument given and file exists, use it
     if csv_path and Path(csv_path).exists():
         target_csv = Path(csv_path)
     else:
-        # 2. Automatically find the MOST RECENT .csv file in the repo
+        # 2. Automatically find the MOST RECENT .csv file in the repository
         csv_files = sorted(Path('.').glob('*.csv'), key=lambda p: p.stat().st_mtime, reverse=True)
         target_csv = csv_files[0] if csv_files else None
 
