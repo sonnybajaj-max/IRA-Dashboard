@@ -29,11 +29,12 @@ jobs:
 
       - name: Execute Dashboard Script
         run: |
-          # Finds your uploaded CSV and passes it to dashboard.py
-          python dashboard.py Portfolio_Positions_Jul-24-2026.csv
+          python dashboard.py
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: .  # Publishes the generated index.html        with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: .  # Publishes the generated index.html
