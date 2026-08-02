@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main  # Or 'master', depending on your default branch name
-  workflow_dispatch: # Allows you to manually click "Run Workflow" in GitHub
+  workflow_dispatch: # Allows manual execution via "Run workflow" button
 
 permissions:
   contents: write
@@ -35,6 +35,4 @@ jobs:
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: .  # Publishes the generated index.html        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: .  # Publishes the generated index.html
+          publish_dir: .
